@@ -15,13 +15,12 @@ This Repository contains a quarto document and relevant data sourced from FEMA's
 ### Repository Structure:
 
 EDS240-nri-acs-viz/
-│
 
+├── .Rhistory
+├── .gitignore│
 ├── README.md
-
-├── .gitignore
-      data/
-│      └── National_Risk_Index_Counties_807384124455672111.csv
-
+├───   data/
+│   ├── National_Risk_Index_Counties_807384124455672111.csv
 └── HW2-FEMA-Risk-Index-Composite.qmd
-├── 
+├── EDS240HW2-nri-acs-viz.Rproj
+├── working.qmd

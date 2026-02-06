@@ -12,7 +12,6 @@ execute:
 ## National Risk Index Analysis
 
 ```{r}
-
 # initial data input and wrangling
 library(tidyverse)
 library(here)
@@ -23,7 +22,13 @@ nri_data = read_csv(here("data", "National_Risk_Index_Counties_80738412445567211
 # clean the column names and filter out for only the 50 states
 nri_data_clean <- nri_data %>%
   clean_names()
+```
 
+
+```{r}
+#| fig-height: 14
+#| fig-width: 9
+#| fig-alt: "Boxplots of National Risk Index Scores for all 50 states. California highlighted for comparison."
 # create a boxplot to visualize the national risk index scores per state
 
 nri_data_clean %>%
@@ -36,11 +41,15 @@ nri_data_clean %>%
   coord_flip() +
   scale_fill_manual(values = c("TRUE" = "dodgerblue", "FALSE" = "grey")) +
   labs(title = "National Risk Index Scores by State",
+       subtitle = "California highlighted in Blue",
+       caption = "Source: FEMA National Risk Index",
        x = NULL,
        y = "Risk Index Score") +
   theme_minimal() +
-  theme(legend.position = "none",
-        plot.title = element_text(hjust = 0.5))
+  theme(axis.text.y = element_text(size = 6),
+        legend.position = "none",
+        plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5))
 
 
   
