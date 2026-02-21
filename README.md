@@ -6,11 +6,11 @@
 
 #### EDS 240
 
-#### Date 1/28/2025
+#### Date 2/11/2025
 
 ### About:
 
-This Repository contains a quarto document and relevant data sourced from FEMA's National Risk Index. 
+This Repository contains quarto documents and relevant data sourced from FEMA's National Risk Index, as well as the US Census Bureau's ACS data. 
 
 ### Repository Structure:
 
@@ -21,7 +21,9 @@ EDS240-nri-acs-viz/
 ├── README.md
 ├───   data/
 │   ├── National_Risk_Index_Counties_807384124455672111.csv
+│   ├── ACS-1yr-2023-county-race-ethnicity.csv
 └── HW2-FEMA-Risk-Index-Composite.qmd
 ├── EDS240HW2-nri-acs-viz.Rproj
 ├── working.qmd
+├── HW3.qmd
 ```

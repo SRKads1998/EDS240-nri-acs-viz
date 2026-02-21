@@ -1,0 +1,139 @@
+---
+title: "HW3 Heat Wave California Population Risk"
+author: "Stephan Kadonoff"
+format: html
+editor: visual
+date: 2/11/2025
+execute: 
+  message: false
+  warning: false
+---
+
+#### Data Loading
+
+```{r}
+# read in inital libraries
+library(tidyverse)
+library(tidycensus)
+library(here)
+library(janitor)
+```
+
+```{r}
+#....Step 1a: see all available ACS variables + descriptions.....
+acs_vars <- tidycensus::load_variables(year = 2023,
+                                       dataset = "acs1")
+
+#..............Step 1b: import race & ethnicity data.............
+race_ethnicity <- tidycensus::get_acs(
+  geography = "county",
+  survey = "acs1",
+  # NOTE: you may not end up using all these variables
+ variables = c("B01003_001", "B02001_002", "B02001_003", 
+               "B02001_004", "B02001_005", "B02001_006",
+               "B02001_007", "B02001_008", "B03002_012",
+               "B03002_002"),
+  state = "CA", 
+  year = 2023) |>
+   # join variable descriptions (so we know what's what!)
+  dplyr::left_join(acs_vars, by = dplyr::join_by(variable == name)) 
+
+#.................Step 2: write ACS data to file.................
+readr::write_csv(race_ethnicity, here::here("data", "ACS-1yr-2023-county-race-ethnicity.csv"))
+
+#..................Step 3: read in your CSV file.................
+race_ethnicity <- readr::read_csv(here::here("data", "ACS-1yr-2023-county-race-ethnicity.csv"))
+
+# read in NRI county data 
+nri_data <-  read_csv("data/National_Risk_Index_Counties_807384124455672111.csv")
+nri_clean <- nri_data %>%
+  clean_names() %>%
+  filter(state_name == "California") %>%
+  mutate(state_county_fips_code = str_pad(state_county_fips_code, width = 5, side = "left", pad = "0"))
+
+
+```
+
+
+```{r}
+# wrangle data
+
+race_eth <- race_ethnicity %>%
+  select(GEOID, NAME, variable, estimate) %>%
+  pivot_wider(names_from = variable,
+              values_from = estimate) %>%
+  mutate(pct_white = (B02001_002 / B01003_001),
+         pct_black = (B02001_003 / B01003_001),
+         pct_indigenous = (B02001_004 / B01003_001),
+         pct_asian = (B02001_005 / B01003_001),
+         pct_pac_islander = (B02001_006 / B01003_001),
+         pct_other = (B02001_007 / B01003_001),
+         pct_two_plus = (B02001_008 / B01003_001),
+         pct_hisp = (B03002_012 / B01003_001))
+
+# join data 
+
+ethnicity_nri_joined <- race_eth %>%
+  left_join(nri_clean, by = c("GEOID" = "state_county_fips_code"))
+
+heat_exposure_by_race <- ethnicity_nri_joined %>%
+  summarize(White = weighted.mean(heat_wave_exposure_population, pct_white * B01003_001, na.rm = TRUE),
+            Black = weighted.mean(heat_wave_exposure_population, pct_black * B01003_001, na.rm = TRUE),
+            Indigenous = weighted.mean(heat_wave_exposure_population, pct_indigenous * B01003_001, na.rm = TRUE),
+            Asian = weighted.mean(heat_wave_exposure_population, pct_asian * B01003_001, na.rm = TRUE),
+            Pacific_Islander = weighted.mean(heat_wave_exposure_population, pct_pac_islander * B01003_001, na.rm = TRUE),
+            Other = weighted.mean(heat_wave_exposure_population, pct_other * B01003_001, na.rm = TRUE),
+            Two_or_More = weighted.mean(heat_wave_exposure_population, pct_two_plus * B01003_001, na.rm = TRUE),
+            Hispanic = weighted.mean(heat_wave_exposure_population, pct_hisp * B01003_001, na.rm = TRUE)) %>%
+  pivot_longer(everything(), names_to = "race_ethnicity", values_to = "avg_heat_exposure")
+
+heat_exposure_by_race
+
+```
+
+```{r}
+#| fig-alt: "Lollipop plot showing heat wave exposure risk scores racial and ethnic groups in California. Black populations have the highest exposure risks scores, followed by Hispanic and 'Other Race' categories. White and Pacific Islander have the least risk."
+
+# create plot showing heatwave risk exposure by race
+
+ggplot(heat_exposure_by_race, aes(x = reorder(race_ethnicity, avg_heat_exposure), 
+                                  y = avg_heat_exposure)) +
+  geom_segment(aes(x = race_ethnicity, xend = race_ethnicity,
+                   y = 0, yend = avg_heat_exposure), 
+               color = "gray7") +
+  geom_point(size = 4) +
+  scale_color_viridis_d(option = "plasma") +
+  scale_x_discrete(labels = c("Pacific_Islander" = "Pacific Islander",
+                              "Two_or_More" = "Two or More")) +
+  scale_y_continuous(labels = scales::comma) +
+  labs(title = "Heat Wave Risk Exposure by Race/Ethnicity in California",
+       subtitle = "Hispanic and Black populations are 2 of the 3 most at risk of Heat Waves",
+       y = "Average Population Exposed to Heat Wave",
+       x = NULL,
+       caption = "Source: FEMA National Risk Index, US Census Bureau ACS") +
+  theme_minimal() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 27))
+```
+
+1.  What are your variables of interest and what kinds of data (e.g. numeric, categorical, ordered, etc.) are they (a bullet point list is fine)?
+
+The variables of interest are `heat_wave_exposure_population` which is numeric and continous. The racial/ethnic variable category from `race_ethnicity` and the GEOID/state_county_fips_code which are categorical.
+
+2.  How did you decide which type of graphic form was best suited for answering the question? What alternative graphic forms could you have used instead? Why did you settle on this particular graphic form?
+
+I went with a lollipop plot because I felt it showed the relative impact of heatwaves on each race/ethnicity. I also was considering a bar graph of some kind, but I felt that this was a cleaner look and showed the comparison more clearly. If I was to go in a different direction, and not try to get down to a single variable, I would like to see a relative portion of the states total racial populations impacted by heatwaves.
+
+3.  Summarize your main finding in no more than two sentences.
+
+I find that even though they are not the largest segments of the state's population, Black, Hispanic, and mixed race populations are the ones most at risk of negative impacts from heatwaves. In terms of overall population, however, it looks like a large majority of the state's population is at risk from heatwaves.
+
+4.  What modifications did you make to this visualization to make it more easily readable?
+
+I angled the x-axis names to make them easier to read, as well as cleaned up them up to remove underscores. I used the `theme_minimal` parameter since I feel it is a lot easier to read. Lastly, I made minor tweaks to the formatting and location of various elements of the visual's text.
+
+5.  Is there anything you wanted to implement, but didn’t know how? If so, please describe.
+
+I think a heatmap would've been cool to implement, but I'm still a bit unsure about its applications and when it would be a good fit, and if is even applicable in this case.
